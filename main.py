@@ -2,11 +2,11 @@
 import pandas as pd
 import ast
 
-df_steam = pd.read_csv('./data/steam_games.csv')
+df_steam = pd.read_csv('./Data/steam_games.csv')
 
-df_items = pd.read_parquet('./data/items.parquet')
+df_items = pd.read_parquet('./Data/items.parquet')
 
-df_reviews = pd.read_csv('./data/reviews.csv')
+df_reviews = pd.read_csv('./Data/reviews.csv')
 
 df_steam['id'].fillna(0, inplace=True)  # Llena los valores NaN con 0
 df_steam['id'] = df_steam['id'].astype(int)  # Convierte a enteros
