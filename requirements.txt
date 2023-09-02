@@ -4,3 +4,4 @@ nltk==3.8.1
 pandas>=1.0.0
 typing_extensions==4.7.1
 uvicorn==0.15.0
+pyarrow==5.0.0
