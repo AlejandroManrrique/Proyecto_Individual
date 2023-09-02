@@ -1,6 +1,6 @@
 asttokens==2.2.1
 fastapi==0.103.0
 nltk==3.8.1
-pandas==2.0.0
+pandas>=1.0.0
 typing_extensions==4.7.1
 
