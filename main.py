@@ -1,48 +1,43 @@
-
 import pandas as pd
-import ast
+from fastapi import FastAPI
 
 df_steam = pd.read_csv('./Data/steam_games.csv')
 
-df_items = pd.read_parquet('./Data/items.parquet')
+# Realiza la conversión de precio en df_steam
+df_steam['price'] = df_steam['price'].apply(lambda x: float(x.replace('$', '').replace(',', '')) if isinstance(x, str) and x.replace('$', '').replace(',', '').replace('.', '').isdigit() else 0.0)
 
-df_reviews = pd.read_csv('./Data/reviews.csv')
+# Otras lecturas de datos...
 
-df_steam['id'].fillna(0, inplace=True)  # Llena los valores NaN con 0
-df_steam['id'] = df_steam['id'].astype(int)  # Convierte a enteros
-
-from fastapi import FastAPI
-from typing import Dict
-
-# Crea una instancia de FastAPI
 app = FastAPI()
 
-
-
-
-# Nueva función userdata
 @app.get("/userdata/{user_id}")
 async def userdata(user_id: str):
     try:
-        # Filtra las revisiones del usuario específico
-        user_reviews = df_reviews[df_reviews['user_id'] == user_id]
+        money_spent = 0
+        recommend_count = 0
+        total_reviews = 0
+        item_ids = set()
 
-        # Filtra los juegos jugados por el usuario
-        game_ids = user_reviews['item_id'].unique()
-        user_steam_games = df_steam[df_steam['id'].astype(int).isin(game_ids)]
+        # Configura el tamaño del lote para la lectura de reseñas
+        chunk_size = 100000
+        user_reviews_generator = pd.read_csv('./Data/reviews.csv', chunksize=chunk_size)
 
-        # Calcula la cantidad de dinero gastado por el usuario
-        user_steam_games['price'] = user_steam_games['price'].apply(lambda x: float(x.replace('$', '').replace(',', '')) if x.replace('$', '').replace(',', '').replace('.', '').isdigit() else None)
-        money_spent = user_steam_games['price'].sum()
+        for chunk in user_reviews_generator:
+            user_reviews = chunk[chunk['user_id'] == user_id]
 
-        # Calcula el porcentaje de recomendación promedio de los juegos jugados por el usuario
-        user_reviews['recommend'] = user_reviews['recommend'].astype(bool)
-        recommend_percentage = user_reviews['recommend'].mean() * 100
+            # Procesa los datos del lote actual
+            money_spent += user_reviews.merge(df_steam[['id', 'price']], left_on='item_id', right_on='id', how='inner')['price'].sum()
+            recommend_count += user_reviews['recommend'].sum()
+            total_reviews += len(user_reviews)
+            item_ids.update(user_reviews['item_id'].unique())
 
-        # Calcula la cantidad de items que posee el usuario
-        num_items = len(game_ids)
+        if total_reviews > 0:
+            recommend_percentage = (recommend_count / total_reviews) * 100
+        else:
+            recommend_percentage = 0
 
-        # Crear un diccionario con los resultados
+        num_items = len(item_ids)
+
         user_data = {
             "money_spent": money_spent,
             "recommend_percentage": recommend_percentage,
@@ -50,35 +45,9 @@ async def userdata(user_id: str):
         }
 
         return user_data
-    except ValueError:
-        # Si no se puede convertir a entero, manejar el caso de cadena
-        # Buscar el user_id en el DataFrame para verificar su existencia
-        if user_id in df_reviews['user_id'].values:
-            # Realizar cálculos basados en el user_id encontrado
-            user_reviews = df_reviews[df_reviews['user_id'] == user_id]
 
-            # Filtra los juegos jugados por el usuario
-            game_ids = user_reviews['item_id'].unique()
-            user_steam_games = df_steam[df_steam['id'].astype(int).isin(game_ids)]
+    except Exception as e:
+        return {"message": f"Error: {str(e)}"}
+import psutil
 
-            # Calcula la cantidad de dinero gastado por el usuario
-            user_steam_games['price'] = user_steam_games['price'].apply(lambda x: float(x.replace('$', '').replace(',', '')) if x.replace('$', '').replace(',', '').replace('.', '').isdigit() else None)
-            money_spent = user_steam_games['price'].sum()
 
-            # Calcula el porcentaje de recomendación promedio de los juegos jugados por el usuario
-            user_reviews['recommend'] = user_reviews['recommend'].astype(bool)
-            recommend_percentage = user_reviews['recommend'].mean() * 100
-
-            # Calcula la cantidad de items que posee el usuario
-            num_items = len(game_ids)
-
-            # Crear un diccionario con los resultados
-            user_data = {
-                "money_spent": money_spent,
-                "recommend_percentage": recommend_percentage,
-                "num_items": num_items
-            }
-
-            return user_data
-        else:
-            return {"message": "Usuario no encontrado"}
