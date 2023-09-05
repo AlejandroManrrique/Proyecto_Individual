@@ -109,3 +109,11 @@ async def recomendacion_juego(product_id: int):
 
     except Exception as e:
         return {"message": f"Error: {str(e)}"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=10000)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app2, host="0.0.0.0", port=10000)
