@@ -1,56 +1,6 @@
 
 import pandas as pd
 from fastapi import FastAPI
-
-df_steam = pd.read_csv('./Data/steam_games.csv')
-
-# Realiza la conversión de precio en df_steam
-df_steam['price'] = df_steam['price'].apply(lambda x: float(x.replace('$', '').replace(',', '')) if isinstance(x, str) and x.replace('$', '').replace(',', '').replace('.', '').isdigit() else 0.0)
-
-# Otras lecturas de datos...
-
-app = FastAPI()
-
-@app.get("/userdata/{user_id}")
-async def userdata(user_id: str):
-    try:
-        Cantidad = 0
-        recommend_count = 0
-        total_reviews = 0
-        item_ids = set()
-
-        # Configura el tamaño del lote para la lectura de reviews
-        chunk_size = 100000
-        user_reviews_generator = pd.read_csv('./Data/reviews.csv', chunksize=chunk_size)
-
-        for chunk in user_reviews_generator:
-            user_reviews = chunk[chunk['user_id'] == user_id]
-
-            # Procesa los datos del lote actual
-            Cantidad += user_reviews.merge(df_steam[['id', 'price']], left_on='item_id', right_on='id', how='inner')['price'].sum()
-            recommend_count += user_reviews['recommend'].sum()
-            total_reviews += len(user_reviews)
-            item_ids.update(user_reviews['item_id'].unique())
-
-        #Calcula el porcentage de recomendaciones
-        if total_reviews > 0:
-            porcentaje = (recommend_count / total_reviews) * 100
-        else:
-            porcentaje = 0
-        #Cuenta los numeros de items
-        cantidad_de_items = len(item_ids)
-
-        user_data = {
-            "Cantidad de dinero gastado": Cantidad,
-            "recommend_porcentaje": porcentaje,
-            "cantidad de items": cantidad_de_items
-        }
-
-        return user_data
-
-    except Exception as e:
-        return {"message": f"Error: {str(e)}"}
-
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -113,4 +63,4 @@ async def recomendacion_juego(product_id: int):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app2, host="0.0.0.0", port=10001)
+    uvicorn.run(app2, host="0.0.0.0", port=10000)
