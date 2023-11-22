@@ -104,7 +104,7 @@ async def recomendacion_juego(product_id: int):
             # Devuelve la lista de juegos recomendados
             return recommended_games[['app_name','id']].to_dict(orient='records')
 
-        return {"message": "No se encontraron juegos similares."}
+        return {"message": "No se encontraron juegos similares"}
 
     except Exception as e:
         return {"message": f"Error: {str(e)}"}
